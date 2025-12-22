@@ -69,7 +69,11 @@ export function LoginPage() {
       
     } catch (err: any) {
       console.error('Auth error:', err);
-      setError(err.message || 'Authentication failed');
+      let message = err.message || 'Authentication failed';
+      if (message.includes('Invalid login credentials')) {
+        message = 'Invalid email or password. If you haven\'t created an account yet, please switch to Sign Up.';
+      }
+      setError(message);
     } finally {
       setLoading(false);
     }

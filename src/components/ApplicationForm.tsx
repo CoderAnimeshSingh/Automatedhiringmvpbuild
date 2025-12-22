@@ -30,25 +30,28 @@ export function ApplicationForm() {
 
     try {
       let resume_url = '';
+      let resume_data = '';
+      let resume_filename = '';
       
-      // Upload resume to Supabase Storage
+      // Prepare resume for upload via server (to bypass RLS)
       if (resumeFile) {
-        const fileExt = resumeFile.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('make-45c854cf-resumes')
-          .upload(fileName, resumeFile);
+        // Convert file to base64
+        const fileToBase64 = (file: File): Promise<string> => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+              const result = reader.result as string;
+              // Remove data URL prefix
+              const base64 = result.split(',')[1];
+              resolve(base64);
+            };
+            reader.onerror = error => reject(error);
+          });
+        };
 
-        if (uploadError) {
-          throw new Error(`Resume upload failed: ${uploadError.message}`);
-        }
-
-        const { data: urlData } = supabase.storage
-          .from('make-45c854cf-resumes')
-          .getPublicUrl(fileName);
-        
-        resume_url = urlData.publicUrl;
+        resume_data = await fileToBase64(resumeFile);
+        resume_filename = resumeFile.name;
       }
 
       // Submit application via server
@@ -62,7 +65,8 @@ export function ApplicationForm() {
           },
           body: JSON.stringify({
             ...formData,
-            resume_url,
+            resume_data,
+            resume_filename,
           }),
         }
       );
